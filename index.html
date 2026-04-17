@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🐾 にゃんトレ記録</title>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif; background: #faf3eb; color: #3d2b1f; min-height: 100vh; }
+
+    /* ---- Header with cat ears ---- */
+    header { background: #5c3d2e; color: #faf3eb; padding: 24px 24px 16px; position: relative; text-align: center; }
+    header::before, header::after {
+      content: '';
+      position: absolute;
+      top: -14px;
+      width: 28px; height: 28px;
+      background: #5c3d2e;
+      border-radius: 4px 14px 0 0;
+      transform: rotate(-10deg);
+    }
+    header::before { left: 30%; transform: rotate(-10deg); }
+    header::after  { right: 30%; transform: rotate(10deg); }
+    header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    header .date { font-size: 13px; color: #d4b89a; }
+
+    /* ---- Nav ---- */
+    nav { display: flex; background: #7a5544; }
+    nav button { flex: 1; padding: 12px; background: none; border: none; color: #c4a48e; font-size: 13px; cursor: pointer; border-bottom: 3px solid transparent; }
+    nav button.active { color: #fff; border-bottom-color: #e88a4d; }
+
+    main { padding: 20px 16px; max-width: 480px; margin: 0 auto; }
+
+    /* ---- Paw print background pattern ---- */
+    main::before {
+      content: '🐾';
+      position: fixed;
+      top: 120px;
+      right: 10px;
+      font-size: 30px;
+      opacity: 0.08;
+      transform: rotate(20deg);
+      pointer-events: none;
+    }
+    main::after {
+      content: '🐾';
+      position: fixed;
+      bottom: 60px;
+      left: 10px;
+      font-size: 40px;
+      opacity: 0.08;
+      transform: rotate(-15deg);
+      pointer-events: none;
+    }
+
+    /* ---- Today card ---- */
+    .today-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(92,61,46,0.1); border: 1px solid #f0e4d7; }
+    .today-card h2 { font-size: 15px; color: #7a5544; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .day-badge { background: #e88a4d; color: white; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 20px; }
+    .exercise-item { padding: 12px 0; border-bottom: 1px solid #f5ece3; }
+    .exercise-item:last-child { border-bottom: none; }
+    .exercise-header { display: flex; align-items: center; gap: 12px; }
+    .exercise-header input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; accent-color: #e88a4d; flex-shrink: 0; }
+    .exercise-name { font-size: 16px; font-weight: 600; color: #3d2b1f; }
+    .exercise-item.done .exercise-name { text-decoration: line-through; color: #c4a48e; }
+    .record-inputs { display: flex; gap: 8px; margin-top: 10px; }
+    .record-field { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+    .record-field label { font-size: 11px; color: #9a8578; font-weight: 600; }
+    .record-input { width: 100%; border: 1px solid #e8ddd1; border-radius: 8px; padding: 7px 8px; font-size: 14px; color: #3d2b1f; outline: none; text-align: center; background: #fffcf8; }
+    .record-input:focus { border-color: #e88a4d; }
+    .record-input.memo { text-align: left; }
+
+    .save-btn { width: 100%; padding: 14px; background: #e88a4d; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
+    .save-btn:hover { background: #d67a3d; }
+    .save-btn:active { background: #c56a2d; }
+    .saved-msg { text-align: center; color: #e88a4d; font-size: 14px; margin-top: 10px; height: 20px; opacity: 0; transition: opacity 0.4s; }
+
+    .rest-day { text-align: center; padding: 60px 20px; color: #9a8578; }
+    .rest-day .icon { font-size: 60px; margin-bottom: 12px; }
+
+    /* ---- History ---- */
+    .history-empty { text-align: center; color: #c4a48e; padding: 60px 20px; font-size: 15px; }
+    .history-day { background: white; border-radius: 16px; padding: 16px 20px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(92,61,46,0.08); border: 1px solid #f0e4d7; }
+    .history-day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .date-label { font-size: 14px; font-weight: 700; color: #5c3d2e; }
+    .completion { font-size: 12px; color: #9a8578; }
+    .history-exercise { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 14px; border-bottom: 1px solid #f5ece3; }
+    .history-exercise:last-child { border-bottom: none; }
+    .status-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+    .ex-name { font-weight: 600; color: #3d2b1f; }
+    .ex-detail { font-size: 12px; color: #9a8578; margin-top: 2px; }
+
+    /* ---- Schedule ---- */
+    .schedule-wrap { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 12px rgba(92,61,46,0.08); border: 1px solid #f0e4d7; }
+    .schedule-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .schedule-wrap th { background: #5c3d2e; color: #faf3eb; padding: 10px 6px; text-align: center; font-weight: 600; }
+    .schedule-wrap th.tc { background: #e88a4d; }
+    .schedule-wrap td { padding: 10px 6px; text-align: center; border-bottom: 1px solid #f5ece3; }
+    .schedule-wrap tr:last-child td { border-bottom: none; }
+    .schedule-wrap td:first-child { font-weight: 700; color: #5c3d2e; background: #faf3eb; text-align: left; padding-left: 12px; }
+    .schedule-wrap td.tc { background: #fff3e8; }
+    .dot-yes { color: #e88a4d; font-size: 16px; }
+    .dot-no { color: #e0d5ca; font-size: 12px; }
+
+    .import-area { margin-top: 16px; text-align: center; }
+    .import-btn { display: inline-block; padding: 10px 20px; background: #f5ece3; color: #7a5544; border: 2px dashed #d4b89a; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .import-btn:hover { background: #f0e4d7; }
+    .import-msg { font-size: 13px; margin-top: 10px; color: #e88a4d; opacity: 0; transition: opacity 0.4s; }
+    .import-file { display: none; }
+
+    /* ---- Cat decorations ---- */
+    .cat-deco { text-align: center; font-size: 14px; color: #c4a48e; margin-top: 24px; padding: 8px; }
+    .paw-divider { text-align: center; font-size: 10px; letter-spacing: 12px; color: #e0d5ca; margin: 16px 0 8px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🐾 にゃんトレ記録</h1>
+  <div class="date" id="hDate"></div>
+</header>
+
+<nav>
+  <button id="btn-today" class="active" onclick="switchTab('today')">🐱 今日</button>
+  <button id="btn-history" onclick="switchTab('history')">🐾 履歴</button>
+  <button id="btn-schedule" onclick="switchTab('schedule')">📋 予定</button>
+</nav>
+
+<main id="app"></main>
+
+<script>
+var DAYS = ['日','月','火','水','木','金','土'];
+var CAT_FACES = ['😺','😸','😻','😽','🐱','😼','😹'];
+
+var DEFAULT_SCHEDULE = {
+  月: ['チンニング','ディップス','骨盤底筋'],
+  火: ['腕立て伏せ','アーム','骨盤底筋'],
+  水: ['チンニング','ディップス'],
+  木: ['チンニング','腕立て伏せ','アーム'],
+  金: ['ディップス','骨盤底筋'],
+  土: ['チンニング','腕立て伏せ','アーム'],
+  日: ['ディップス','腕立て伏せ','アーム','骨盤底筋']
+};
+var DEFAULT_ALL_EX = ['チンニング','ディップス','腕立て伏せ','アーム','骨盤底筋'];
+
+function loadSchedule() {
+  try { var raw = localStorage.getItem('schedule_data'); if (raw) return JSON.parse(raw); } catch(e) {}
+  return null;
+}
+function saveSchedule(schedule, allEx) {
+  localStorage.setItem('schedule_data', JSON.stringify({ schedule: schedule, allEx: allEx }));
+}
+
+var stored = loadSchedule();
+var SCHEDULE = stored ? stored.schedule : DEFAULT_SCHEDULE;
+var ALL_EX   = stored ? stored.allEx    : DEFAULT_ALL_EX;
+var currentTab = 'today';
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('btn-today').className    = (tab === 'today')    ? 'active' : '';
+  document.getElementById('btn-history').className  = (tab === 'history')  ? 'active' : '';
+  document.getElementById('btn-schedule').className = (tab === 'schedule') ? 'active' : '';
+  render();
+}
+
+function render() {
+  var app = document.getElementById('app');
+  app.innerHTML = '';
+  if (currentTab === 'today')         renderToday(app);
+  else if (currentTab === 'history')  renderHistory(app);
+  else                                renderSchedule(app);
+}
+
+function dateKey(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+function formatDate(d) { return d.getFullYear() + '年' + (d.getMonth()+1) + '月' + d.getDate() + '日（' + DAYS[d.getDay()] + '）'; }
+function loadRec(key) { try { return JSON.parse(localStorage.getItem('w_' + key)) || {}; } catch(e) { return {}; } }
+function saveRec(key, data) { localStorage.setItem('w_' + key, JSON.stringify(data)); }
+function allKeys() {
+  var out = [];
+  for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf('w_') === 0) out.push(k.slice(2)); }
+  return out.sort(function(a,b){ return b > a ? 1 : -1; });
+}
+function randomCat() { return CAT_FACES[Math.floor(Math.random() * CAT_FACES.length)]; }
+function pawDivider() { var d = document.createElement('div'); d.className = 'paw-divider'; d.textContent = '🐾 🐾 🐾'; return d; }
+function catDeco(text) { var d = document.createElement('div'); d.className = 'cat-deco'; d.textContent = text; return d; }
+
+// ==== Excel ====
+function importExcel(file) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, { type: 'array' });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      var headerRow = -1;
+      for (var r = 0; r < data.length; r++) {
+        var row = data[r];
+        if (row && row.length > 2 && r + 1 < data.length) {
+          var nextRow = data[r + 1];
+          if (nextRow) {
+            for (var c = 0; c < nextRow.length; c++) {
+              if (['月','火','水','木','金','土','日'].indexOf(String(nextRow[c]||'').trim()) >= 0) { headerRow = r; break; }
+            }
+          }
+          if (headerRow >= 0) break;
+        }
+      }
+      if (headerRow < 0) { alert('Excelの形式を認識できませんでした'); return; }
+      var hdr = data[headerRow]; var exercises = []; var exCols = [];
+      for (var c = 0; c < hdr.length; c++) {
+        var v = String(hdr[c]||'').trim();
+        if (v && ['月','火','水','木','金','土','日'].indexOf(v) < 0) { exercises.push(v); exCols.push(c); }
+      }
+      var newSchedule = {}; var allExSet = {};
+      for (var r = headerRow + 1; r < data.length; r++) {
+        var row = data[r]; if (!row) continue; var dayName = null;
+        for (var c = 0; c < row.length; c++) { var v = String(row[c]||'').trim(); if (['月','火','水','木','金','土','日'].indexOf(v) >= 0) { dayName = v; break; } }
+        if (!dayName) continue;
+        var dayEx = [];
+        for (var j = 0; j < exercises.length; j++) {
+          var cell = String(row[exCols[j]]||'').trim();
+          if (cell === '〇' || cell === '◯' || cell === 'O' || cell === 'o' || cell === '○') { dayEx.push(exercises[j]); allExSet[exercises[j]] = true; }
+        }
+        newSchedule[dayName] = dayEx;
+      }
+      SCHEDULE = newSchedule;
+      ALL_EX = exercises.filter(function(e){ return allExSet[e]; });
+      saveSchedule(SCHEDULE, ALL_EX);
+      render();
+      return true;
+    } catch(err) { alert('読み込みに失敗したにゃん: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ==== TODAY ====
+function renderToday(app) {
+  var d = new Date();
+  var dayName = DAYS[d.getDay()];
+  var key = dateKey(d);
+  var exercises = SCHEDULE[dayName] || [];
+  var saved = loadRec(key);
+
+  if (exercises.length === 0) {
+    app.innerHTML = '<div class="rest-day"><div class="icon">😴🐱</div><p>今日はおやすみにゃん…zzZ</p></div>';
+    app.appendChild(catDeco('🐾 ゆっくり休んでにゃ〜 🐾'));
+    return;
+  }
+
+  var card = document.createElement('div');
+  card.className = 'today-card';
+  var h2 = document.createElement('h2');
+  h2.innerHTML = randomCat() + ' 今日のメニュー <span class="day-badge">' + dayName + '曜日</span>';
+  card.appendChild(h2);
+
+  exercises.forEach(function(ex, idx) {
+    var rec = saved[ex] || {};
+    var item = document.createElement('div');
+    item.className = 'exercise-item' + (rec.done ? ' done' : '');
+
+    var cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = !!rec.done;
+    cb.addEventListener('change', function() { item.classList.toggle('done', cb.checked); });
+
+    var nm = document.createElement('span');
+    nm.className = 'exercise-name';
+    nm.textContent = ex;
+
+    var hdr = document.createElement('div');
+    hdr.className = 'exercise-header';
+    hdr.appendChild(cb);
+    hdr.appendChild(nm);
+
+    var inputs = document.createElement('div');
+    inputs.className = 'record-inputs';
+    [{k:'sets',lbl:'セット数',t:'number'},{k:'reps',lbl:'回数',t:'number'},{k:'memo',lbl:'メモ',t:'text'}]
+    .forEach(function(f) {
+      var fd = document.createElement('div'); fd.className = 'record-field';
+      if (f.k === 'memo') fd.style.flex = '2';
+      var lbl = document.createElement('label'); lbl.textContent = f.lbl;
+      var inp = document.createElement('input');
+      inp.type = f.t; inp.className = 'record-input' + (f.k === 'memo' ? ' memo' : '');
+      inp.placeholder = f.k === 'memo' ? '自由記入' : '–';
+      inp.value = rec[f.k] || ''; inp.dataset.f = f.k;
+      if (f.t === 'number') inp.min = '1';
+      fd.appendChild(lbl); fd.appendChild(inp); inputs.appendChild(fd);
+    });
+
+    item.appendChild(hdr);
+    item.appendChild(inputs);
+    card.appendChild(item);
+
+    if (idx < exercises.length - 1) card.appendChild(pawDivider());
+  });
+
+  var saveBtn = document.createElement('button');
+  saveBtn.className = 'save-btn';
+  saveBtn.textContent = '🐾 保存するにゃん';
+  saveBtn.onclick = function() {
+    var data = loadRec(key);
+    var allItems = card.querySelectorAll('.exercise-item');
+    exercises.forEach(function(ex, idx) {
+      var itEl = allItems[idx]; if (!itEl) return;
+      var cbEl = itEl.querySelector('input[type="checkbox"]');
+      var inps = itEl.querySelectorAll('input[data-f]');
+      var obj = { done: cbEl ? cbEl.checked : false };
+      inps.forEach(function(i) { obj[i.dataset.f] = i.value; });
+      data[ex] = obj;
+    });
+    saveRec(key, data);
+    msg.style.opacity = '1';
+    setTimeout(function(){ msg.style.opacity = '0'; }, 2000);
+  };
+
+  var msg = document.createElement('div');
+  msg.className = 'saved-msg';
+  msg.textContent = '保存したにゃん 😸';
+
+  app.appendChild(card);
+  app.appendChild(saveBtn);
+  app.appendChild(msg);
+  app.appendChild(catDeco('💪🐱 がんばるにゃん！'));
+}
+
+// ==== HISTORY ====
+function renderHistory(app) {
+  var keys = allKeys();
+  if (keys.length === 0) {
+    app.innerHTML = '<div class="history-empty"><div style="font-size:48px;margin-bottom:12px">🐱</div>まだ記録がないにゃん<br><span style="font-size:12px;color:#d4b89a">トレーニングを保存すると、ここに表示されるにゃ</span></div>';
+    return;
+  }
+  keys.forEach(function(key) {
+    var record = loadRec(key);
+    var date = new Date(key + 'T12:00:00');
+    var dayName = DAYS[date.getDay()];
+    var scheduled = SCHEDULE[dayName] || [];
+    var doneCount = scheduled.filter(function(ex) { return record[ex] && record[ex].done; }).length;
+
+    var card = document.createElement('div');
+    card.className = 'history-day';
+    var hdr = document.createElement('div');
+    hdr.className = 'history-day-header';
+    var catIcon = doneCount === scheduled.length ? '😻' : (doneCount > 0 ? '😺' : '😿');
+    hdr.innerHTML = '<span class="date-label">' + catIcon + ' ' + (date.getMonth()+1) + '/' + date.getDate() + '（' + dayName + '）</span>'
+      + '<span class="completion">' + doneCount + ' / ' + scheduled.length + ' 完了</span>';
+    card.appendChild(hdr);
+
+    scheduled.forEach(function(ex) {
+      var rec = record[ex] || {};
+      var parts = [rec.sets ? rec.sets+'セット' : '', rec.reps ? rec.reps+'回' : '', rec.memo||''].filter(Boolean).join(' · ');
+      var row = document.createElement('div');
+      row.className = 'history-exercise';
+      row.innerHTML = '<span class="status-icon">' + (rec.done ? '🐾' : '⬜') + '</span>'
+        + '<div><div class="ex-name">' + ex + '</div>'
+        + (parts ? '<div class="ex-detail">' + parts + '</div>' : '')
+        + '</div>';
+      card.appendChild(row);
+    });
+    app.appendChild(card);
+  });
+  app.appendChild(catDeco('🐾 にゃんトレの記録にゃ〜 🐾'));
+}
+
+// ==== SCHEDULE ====
+function renderSchedule(app) {
+  var d = new Date();
+  var todayDay = DAYS[d.getDay()];
+  var weekdays = ['月','火','水','木','金','土','日'];
+
+  var wrap = document.createElement('div');
+  wrap.className = 'schedule-wrap';
+  var table = document.createElement('table');
+
+  var thead = document.createElement('thead');
+  var hrow = document.createElement('tr');
+  var th0 = document.createElement('th'); th0.textContent = '種目'; hrow.appendChild(th0);
+  weekdays.forEach(function(day) {
+    var th = document.createElement('th'); th.textContent = day;
+    if (day === todayDay) th.className = 'tc';
+    hrow.appendChild(th);
+  });
+  thead.appendChild(hrow); table.appendChild(thead);
+
+  var tbody = document.createElement('tbody');
+  ALL_EX.forEach(function(ex) {
+    var tr = document.createElement('tr');
+    var td0 = document.createElement('td'); td0.textContent = ex; tr.appendChild(td0);
+    weekdays.forEach(function(day) {
+      var td = document.createElement('td');
+      if (day === todayDay) td.className = 'tc';
+      var has = (SCHEDULE[day] || []).indexOf(ex) >= 0;
+      td.innerHTML = has ? '<span class="dot-yes">🐾</span>' : '<span class="dot-no">–</span>';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody); wrap.appendChild(table); app.appendChild(wrap);
+
+  // Excel 取り込み
+  var area = document.createElement('div'); area.className = 'import-area';
+  var fileInput = document.createElement('input'); fileInput.type = 'file'; fileInput.accept = '.xlsx,.xls'; fileInput.className = 'import-file';
+  var btn = document.createElement('label'); btn.className = 'import-btn'; btn.textContent = '📂 Excelからスケジュールを更新'; btn.appendChild(fileInput);
+  var importMsg = document.createElement('div'); importMsg.className = 'import-msg';
+  fileInput.addEventListener('change', function() {
+    if (fileInput.files.length > 0) {
+      importExcel(fileInput.files[0]);
+      importMsg.textContent = '更新したにゃん 😸';
+      importMsg.style.opacity = '1';
+      setTimeout(function(){ importMsg.style.opacity = '0'; }, 3000);
+      fileInput.value = '';
+    }
+  });
+  area.appendChild(btn); area.appendChild(importMsg); app.appendChild(area);
+  app.appendChild(catDeco('🐱 メニューは Excel で管理にゃ'));
+}
+
+document.getElementById('hDate').textContent = formatDate(new Date());
+render();
+</script>
+</body>
+</html>
