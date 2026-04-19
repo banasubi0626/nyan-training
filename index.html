@@ -71,6 +71,18 @@
     .record-input:focus { border-color: #e88a4d; }
     .record-input.memo { text-align: left; }
 
+    /* ---- Paw set selector ---- */
+    .paw-shortcut { display: flex; gap: 4px; align-items: center; margin-top: 6px; }
+    .paw-shortcut .paw-btn { background: none; border: 2px solid transparent; border-radius: 8px; font-size: 20px; cursor: pointer; opacity: 0.35; transition: all 0.2s; padding: 4px 8px; }
+    .paw-shortcut .paw-btn:active { transform: scale(0.9); }
+    .paw-shortcut .paw-btn.selected { opacity: 1; border-color: #e88a4d; background: #fff3e8; }
+
+    /* ---- Free memo ---- */
+    .free-memo-card { background: white; border-radius: 16px; padding: 16px 20px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(92,61,46,0.1); border: 1px solid #f0e4d7; }
+    .free-memo-card h3 { font-size: 14px; color: #7a5544; margin-bottom: 10px; }
+    .free-memo-textarea { width: 100%; border: 1px solid #e8ddd1; border-radius: 10px; padding: 10px 12px; font-size: 14px; color: #3d2b1f; outline: none; background: #fffcf8; resize: vertical; min-height: 80px; font-family: inherit; }
+    .free-memo-textarea:focus { border-color: #e88a4d; }
+
     .save-btn { width: 100%; padding: 14px; background: #e88a4d; color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
     .save-btn:hover { background: #d67a3d; }
     .save-btn:active { background: #c56a2d; }
@@ -276,6 +288,8 @@ function renderToday(app) {
 
     var inputs = document.createElement('div');
     inputs.className = 'record-inputs';
+
+    // セット数・回数・メモ（従来どおりの入力欄）
     [{k:'sets',lbl:'セット数',t:'number'},{k:'reps',lbl:'回数',t:'number'},{k:'memo',lbl:'メモ',t:'text'}]
     .forEach(function(f) {
       var fd = document.createElement('div'); fd.className = 'record-field';
@@ -289,12 +303,55 @@ function renderToday(app) {
       fd.appendChild(lbl); fd.appendChild(inp); inputs.appendChild(fd);
     });
 
+    // 肉球ショートカット（セット数入力用）
+    var pawRow = document.createElement('div'); pawRow.className = 'paw-shortcut';
+    var setsInput = inputs.querySelector('input[data-f="sets"]');
+    [1, 2, 3].forEach(function(n) {
+      var btn = document.createElement('button'); btn.type = 'button';
+      var currentSets = parseInt(rec.sets) || 0;
+      btn.className = 'paw-btn' + (currentSets === n ? ' selected' : '');
+      btn.textContent = '🐾';
+      btn.title = n + 'セット';
+      btn.addEventListener('click', function() {
+        var prev = pawRow.querySelector('.selected');
+        if (prev === btn) {
+          btn.classList.remove('selected');
+          if (setsInput) setsInput.value = '';
+        } else {
+          if (prev) prev.classList.remove('selected');
+          btn.classList.add('selected');
+          if (setsInput) setsInput.value = n;
+        }
+      });
+      pawRow.appendChild(btn);
+    });
+    // セット数入力欄の変更を肉球に反映
+    if (setsInput) {
+      setsInput.addEventListener('input', function() {
+        var v = parseInt(setsInput.value);
+        pawRow.querySelectorAll('.paw-btn').forEach(function(b, i) {
+          b.classList.toggle('selected', (i + 1) === v);
+        });
+      });
+    }
+
     item.appendChild(hdr);
     item.appendChild(inputs);
+    item.appendChild(pawRow);
     card.appendChild(item);
 
     if (idx < exercises.length - 1) card.appendChild(pawDivider());
   });
+
+  // フリーメモ欄
+  var memoCard = document.createElement('div');
+  memoCard.className = 'free-memo-card';
+  memoCard.innerHTML = '<h3>📝 きょうのメモ</h3>';
+  var memoArea = document.createElement('textarea');
+  memoArea.className = 'free-memo-textarea';
+  memoArea.placeholder = '追加でやったメニュー、体調、気づきなど…';
+  memoArea.value = saved._freeMemo || '';
+  memoCard.appendChild(memoArea);
 
   var saveBtn = document.createElement('button');
   saveBtn.className = 'save-btn';
@@ -310,6 +367,7 @@ function renderToday(app) {
       inps.forEach(function(i) { obj[i.dataset.f] = i.value; });
       data[ex] = obj;
     });
+    data._freeMemo = memoArea.value;
     saveRec(key, data);
     msg.style.opacity = '1';
     setTimeout(function(){ msg.style.opacity = '0'; }, 2000);
@@ -320,6 +378,7 @@ function renderToday(app) {
   msg.textContent = '保存したにゃん 😸';
 
   app.appendChild(card);
+  app.appendChild(memoCard);
   app.appendChild(saveBtn);
   app.appendChild(msg);
   app.appendChild(catDeco('💪🐱 がんばるにゃん！'));
@@ -350,7 +409,9 @@ function renderHistory(app) {
 
     scheduled.forEach(function(ex) {
       var rec = record[ex] || {};
-      var parts = [rec.sets ? rec.sets+'セット' : '', rec.reps ? rec.reps+'回' : '', rec.memo||''].filter(Boolean).join(' · ');
+      var setsNum = parseInt(rec.sets) || 0;
+      var pawStr = setsNum > 0 ? '🐾'.repeat(setsNum) : '';
+      var parts = [pawStr, rec.reps ? rec.reps+'回' : '', rec.memo||''].filter(Boolean).join(' · ');
       var row = document.createElement('div');
       row.className = 'history-exercise';
       row.innerHTML = '<span class="status-icon">' + (rec.done ? '🐾' : '⬜') + '</span>'
@@ -359,6 +420,12 @@ function renderHistory(app) {
         + '</div>';
       card.appendChild(row);
     });
+    if (record._freeMemo) {
+      var memoDiv = document.createElement('div');
+      memoDiv.style.cssText = 'margin-top:8px;padding:8px 10px;background:#fffcf8;border-radius:8px;font-size:13px;color:#7a5544;border:1px solid #f0e4d7';
+      memoDiv.innerHTML = '📝 ' + record._freeMemo.replace(/\n/g, '<br>');
+      card.appendChild(memoDiv);
+    }
     app.appendChild(card);
   });
   app.appendChild(catDeco('🐾 にゃんトレの記録にゃ〜 🐾'));
