@@ -306,32 +306,31 @@ function renderToday(app) {
     // 肉球ショートカット（セット数入力用）
     var pawRow = document.createElement('div'); pawRow.className = 'paw-shortcut';
     var setsInput = inputs.querySelector('input[data-f="sets"]');
+    var currentSets = parseInt(rec.sets) || 0;
+
+    function updatePaws(val) {
+      pawRow.querySelectorAll('.paw-btn').forEach(function(b, i) {
+        b.classList.toggle('selected', (i + 1) <= val);
+      });
+      if (setsInput) setsInput.value = val > 0 ? val : '';
+    }
+
     [1, 2, 3].forEach(function(n) {
       var btn = document.createElement('button'); btn.type = 'button';
-      var currentSets = parseInt(rec.sets) || 0;
-      btn.className = 'paw-btn' + (currentSets === n ? ' selected' : '');
+      btn.className = 'paw-btn' + (n <= currentSets ? ' selected' : '');
       btn.textContent = '🐾';
       btn.title = n + 'セット';
       btn.addEventListener('click', function() {
-        var prev = pawRow.querySelector('.selected');
-        if (prev === btn) {
-          btn.classList.remove('selected');
-          if (setsInput) setsInput.value = '';
-        } else {
-          if (prev) prev.classList.remove('selected');
-          btn.classList.add('selected');
-          if (setsInput) setsInput.value = n;
-        }
+        var cur = parseInt(setsInput ? setsInput.value : 0) || 0;
+        updatePaws(cur === n ? n - 1 : n);
       });
       pawRow.appendChild(btn);
     });
-    // セット数入力欄の変更を肉球に反映
+
     if (setsInput) {
       setsInput.addEventListener('input', function() {
-        var v = parseInt(setsInput.value);
-        pawRow.querySelectorAll('.paw-btn').forEach(function(b, i) {
-          b.classList.toggle('selected', (i + 1) === v);
-        });
+        var v = parseInt(setsInput.value) || 0;
+        updatePaws(v);
       });
     }
 
