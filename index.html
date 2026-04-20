@@ -206,7 +206,29 @@ function saveSchedule(schedule, allEx) {
 }
 function hasSchedule() { return !!localStorage.getItem('schedule_data'); }
 
+// 旧バージョンからの移行: 記録があるのにスケジュールが無い場合、旧デフォルトを復元
 var stored = loadSchedule();
+if (!stored) {
+  var hasRecords = false;
+  for (var i = 0; i < localStorage.length; i++) {
+    if (localStorage.key(i) && localStorage.key(i).indexOf('w_') === 0) { hasRecords = true; break; }
+  }
+  if (hasRecords) {
+    stored = {
+      schedule: {
+        月: ['チンニング','ディップス','骨盤底筋'],
+        火: ['腕立て伏せ','アーム','骨盤底筋'],
+        水: ['チンニング','ディップス'],
+        木: ['チンニング','腕立て伏せ','アーム'],
+        金: ['ディップス','骨盤底筋'],
+        土: ['チンニング','腕立て伏せ','アーム'],
+        日: ['ディップス','腕立て伏せ','アーム','骨盤底筋']
+      },
+      allEx: ['チンニング','ディップス','腕立て伏せ','アーム','骨盤底筋']
+    };
+    saveSchedule(stored.schedule, stored.allEx);
+  }
+}
 var SCHEDULE = stored ? stored.schedule : {};
 var ALL_EX   = stored ? stored.allEx    : [];
 var currentTab = 'today';
