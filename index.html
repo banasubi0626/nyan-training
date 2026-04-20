@@ -54,6 +54,39 @@
       pointer-events: none;
     }
 
+    /* ---- Cat animation ---- */
+    .cat-pop {
+      position: fixed;
+      font-size: 36px;
+      pointer-events: none;
+      z-index: 999;
+      animation: catBounce 1.2s ease-out forwards;
+    }
+    @keyframes catBounce {
+      0%   { opacity: 1; transform: translate(0, 0) scale(0.3) rotate(0deg); }
+      20%  { opacity: 1; transform: translate(10px, -60px) scale(1.2) rotate(-10deg); }
+      40%  { opacity: 1; transform: translate(25px, -40px) scale(1) rotate(5deg); }
+      60%  { opacity: 1; transform: translate(50px, -80px) scale(1.1) rotate(-5deg); }
+      80%  { opacity: 0.7; transform: translate(80px, -50px) scale(0.9) rotate(10deg); }
+      100% { opacity: 0; transform: translate(120px, -100px) scale(0.5) rotate(20deg); }
+    }
+    .cat-run {
+      position: fixed;
+      font-size: 32px;
+      pointer-events: none;
+      z-index: 999;
+      animation: catRunAcross 1.5s ease-in-out forwards;
+    }
+    @keyframes catRunAcross {
+      0%   { opacity: 0; transform: translateX(-60px) scaleX(-1); }
+      10%  { opacity: 1; transform: translateX(-30px) scaleX(-1); }
+      30%  { transform: translateX(30vw) scaleX(-1) translateY(-5px); }
+      50%  { transform: translateX(50vw) scaleX(-1) translateY(3px); }
+      70%  { transform: translateX(70vw) scaleX(-1) translateY(-5px); }
+      90%  { opacity: 1; transform: translateX(90vw) scaleX(-1) translateY(2px); }
+      100% { opacity: 0; transform: translateX(105vw) scaleX(-1); }
+    }
+
     /* ---- Today card ---- */
     .today-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(92,61,46,0.1); border: 1px solid #f0e4d7; }
     .today-card h2 { font-size: 15px; color: #7a5544; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
@@ -122,6 +155,24 @@
     .import-file { display: none; }
 
     /* ---- Cat decorations ---- */
+    /* ---- Settings ---- */
+    .settings-card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 12px; box-shadow: 0 2px 12px rgba(92,61,46,0.1); border: 1px solid #f0e4d7; }
+    .settings-card h3 { font-size: 16px; color: #5c3d2e; margin-bottom: 12px; }
+    .settings-card p { font-size: 13px; color: #7a5544; line-height: 1.7; margin-bottom: 8px; }
+    .settings-card ol { font-size: 13px; color: #7a5544; line-height: 1.8; padding-left: 20px; margin-bottom: 12px; }
+    .settings-card li { margin-bottom: 6px; }
+    .settings-input { width: 100%; border: 1px solid #e8ddd1; border-radius: 10px; padding: 10px 12px; font-size: 14px; color: #3d2b1f; outline: none; background: #fffcf8; margin-top: 6px; }
+    .settings-input:focus { border-color: #e88a4d; }
+    .settings-btn { padding: 10px 20px; background: #e88a4d; color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+    .settings-btn:active { background: #c56a2d; }
+    .settings-btn.secondary { background: #f5ece3; color: #7a5544; }
+    .settings-btn.secondary:active { background: #e8ddd1; }
+    .settings-status { font-size: 13px; margin-top: 8px; padding: 8px 12px; border-radius: 8px; }
+    .settings-status.ok { background: #f0faf0; color: #4caf50; }
+    .settings-status.ng { background: #faf0f0; color: #e05050; }
+    .code-block { background: #3d2b1f; color: #f5ece3; border-radius: 10px; padding: 12px; font-size: 11px; font-family: monospace; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin: 8px 0; position: relative; max-height: 200px; overflow-y: auto; }
+    .copy-btn { position: sticky; top: 0; float: right; background: #e88a4d; color: white; border: none; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; }
+
     .cat-deco { text-align: center; font-size: 14px; color: #c4a48e; margin-top: 24px; padding: 8px; }
     .paw-divider { text-align: center; font-size: 10px; letter-spacing: 12px; color: #e0d5ca; margin: 16px 0 8px; }
   </style>
@@ -137,6 +188,7 @@
   <button id="btn-today" class="active" onclick="switchTab('today')">🐱 今日</button>
   <button id="btn-history" onclick="switchTab('history')">🐾 履歴</button>
   <button id="btn-schedule" onclick="switchTab('schedule')">📋 予定</button>
+  <button id="btn-settings" onclick="switchTab('settings')">⚙️ 設定</button>
 </nav>
 
 <main id="app"></main>
@@ -145,17 +197,6 @@
 var DAYS = ['日','月','火','水','木','金','土'];
 var CAT_FACES = ['😺','😸','😻','😽','🐱','😼','😹'];
 
-var DEFAULT_SCHEDULE = {
-  月: ['チンニング','ディップス','骨盤底筋'],
-  火: ['腕立て伏せ','アーム','骨盤底筋'],
-  水: ['チンニング','ディップス'],
-  木: ['チンニング','腕立て伏せ','アーム'],
-  金: ['ディップス','骨盤底筋'],
-  土: ['チンニング','腕立て伏せ','アーム'],
-  日: ['ディップス','腕立て伏せ','アーム','骨盤底筋']
-};
-var DEFAULT_ALL_EX = ['チンニング','ディップス','腕立て伏せ','アーム','骨盤底筋'];
-
 function loadSchedule() {
   try { var raw = localStorage.getItem('schedule_data'); if (raw) return JSON.parse(raw); } catch(e) {}
   return null;
@@ -163,10 +204,11 @@ function loadSchedule() {
 function saveSchedule(schedule, allEx) {
   localStorage.setItem('schedule_data', JSON.stringify({ schedule: schedule, allEx: allEx }));
 }
+function hasSchedule() { return !!localStorage.getItem('schedule_data'); }
 
 var stored = loadSchedule();
-var SCHEDULE = stored ? stored.schedule : DEFAULT_SCHEDULE;
-var ALL_EX   = stored ? stored.allEx    : DEFAULT_ALL_EX;
+var SCHEDULE = stored ? stored.schedule : {};
+var ALL_EX   = stored ? stored.allEx    : [];
 var currentTab = 'today';
 
 function switchTab(tab) {
@@ -174,6 +216,7 @@ function switchTab(tab) {
   document.getElementById('btn-today').className    = (tab === 'today')    ? 'active' : '';
   document.getElementById('btn-history').className  = (tab === 'history')  ? 'active' : '';
   document.getElementById('btn-schedule').className = (tab === 'schedule') ? 'active' : '';
+  document.getElementById('btn-settings').className = (tab === 'settings') ? 'active' : '';
   render();
 }
 
@@ -182,7 +225,23 @@ function render() {
   app.innerHTML = '';
   if (currentTab === 'today')         renderToday(app);
   else if (currentTab === 'history')  renderHistory(app);
+  else if (currentTab === 'settings') renderSettings(app);
   else                                renderSchedule(app);
+}
+
+
+// 猫アニメーション
+var CAT_EMOJIS = ['🐱','😺','😸','😻','🐈','🐈‍⬛','😽','😹'];
+function spawnCatAnim(e) {
+  var rect = e.target.getBoundingClientRect();
+  var el = document.createElement('div');
+  var isRun = Math.random() > 0.5;
+  el.className = isRun ? 'cat-run' : 'cat-pop';
+  el.textContent = CAT_EMOJIS[Math.floor(Math.random() * CAT_EMOJIS.length)];
+  el.style.left = rect.left + 'px';
+  el.style.top = (rect.top - 10) + 'px';
+  document.body.appendChild(el);
+  el.addEventListener('animationend', function() { el.remove(); });
 }
 
 function dateKey(d) { return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
@@ -248,8 +307,37 @@ function importExcel(file) {
   reader.readAsArrayBuffer(file);
 }
 
+// ==== 初回セットアップ案内 ====
+function renderSetup(app) {
+  var card = document.createElement('div');
+  card.className = 'settings-card';
+  card.innerHTML = '<h3>🐱 はじめまして！</h3>'
+    + '<p>まずはトレーニングスケジュールを設定するにゃん！<br>'
+    + 'Excel ファイル（曜日 × 種目の〇表）を取り込んでにゃ。</p>';
+
+  var fileInput = document.createElement('input');
+  fileInput.type = 'file'; fileInput.accept = '.xlsx,.xls'; fileInput.style.display = 'none';
+  var btn = document.createElement('button');
+  btn.className = 'settings-btn';
+  btn.textContent = '📂 Excel を取り込む';
+  btn.onclick = function() { fileInput.click(); };
+  fileInput.addEventListener('change', function() {
+    if (fileInput.files.length > 0) {
+      importExcel(fileInput.files[0]);
+      fileInput.value = '';
+    }
+  });
+
+  card.appendChild(btn);
+  card.appendChild(fileInput);
+  app.appendChild(card);
+  app.appendChild(catDeco('🐾 Excel を用意してにゃ〜'));
+}
+
 // ==== TODAY ====
 function renderToday(app) {
+  if (!hasSchedule()) { renderSetup(app); return; }
+
   var d = new Date();
   var dayName = DAYS[d.getDay()];
   var key = dateKey(d);
@@ -320,7 +408,8 @@ function renderToday(app) {
       btn.className = 'paw-btn' + (n <= currentSets ? ' selected' : '');
       btn.textContent = '🐾';
       btn.title = n + 'セット';
-      btn.addEventListener('click', function() {
+      btn.addEventListener('click', function(e) {
+        spawnCatAnim(e);
         var cur = parseInt(setsInput ? setsInput.value : 0) || 0;
         updatePaws(cur === n ? n - 1 : n);
       });
@@ -369,6 +458,7 @@ function renderToday(app) {
     data._freeMemo = memoArea.value;
     saveRec(key, data);
     msg.style.opacity = '1';
+    msg.textContent = '保存したにゃん 😸';
     setTimeout(function(){ msg.style.opacity = '0'; }, 2000);
   };
 
@@ -428,6 +518,95 @@ function renderHistory(app) {
     app.appendChild(card);
   });
   app.appendChild(catDeco('🐾 にゃんトレの記録にゃ〜 🐾'));
+}
+
+// ==== CSV ダウンロード ====
+function buildCsv() {
+  var keys = allKeys();
+  if (keys.length === 0) return null;
+  var lines = ['日付,曜日,種目,完了,セット数,回数,メモ,フリーメモ'];
+  keys.forEach(function(key) {
+    var record = loadRec(key);
+    var date = new Date(key + 'T12:00:00');
+    var dayName = DAYS[date.getDay()];
+    var scheduled = SCHEDULE[dayName] || [];
+    var freeMemo = (record._freeMemo || '').replace(/"/g, '""').replace(/\n/g, ' ');
+    scheduled.forEach(function(ex) {
+      var r = record[ex] || {};
+      var memo = (r.memo || '').replace(/"/g, '""');
+      lines.push([
+        key, dayName, ex, r.done ? '○' : '', r.sets || '', r.reps || '',
+        '"' + memo + '"', '"' + freeMemo + '"'
+      ].join(','));
+    });
+  });
+  return lines.join('\n');
+}
+
+function downloadCsv() {
+  var csv = buildCsv();
+  if (!csv) { alert('まだ記録がないにゃん 🐱'); return; }
+  var bom = '\uFEFF';
+  var blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'nyan-training_' + dateKey(new Date()) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ==== SETTINGS ====
+function renderSettings(app) {
+  // CSV ダウンロード
+  var card = document.createElement('div');
+  card.className = 'settings-card';
+  card.innerHTML = '<h3>📥 履歴ダウンロード</h3>'
+    + '<p>トレーニング記録を CSV ファイルでダウンロードできます。<br>'
+    + 'ダウンロードしたファイルは Google スプレッドシートや Excel で開けます。</p>';
+
+  var dlBtn = document.createElement('button');
+  dlBtn.className = 'settings-btn';
+  dlBtn.textContent = '📥 CSV をダウンロード';
+  dlBtn.onclick = downloadCsv;
+  card.appendChild(dlBtn);
+
+  var keyCount = allKeys().length;
+  if (keyCount > 0) {
+    var info = document.createElement('div');
+    info.className = 'settings-status ok';
+    info.style.marginTop = '10px';
+    info.textContent = '📊 ' + keyCount + '日分の記録があります';
+    card.appendChild(info);
+  }
+
+  app.appendChild(card);
+
+  // データ管理
+  var card2 = document.createElement('div');
+  card2.className = 'settings-card';
+  card2.innerHTML = '<h3>🗑️ データ管理</h3>'
+    + '<p>ブラウザに保存されている記録やスケジュールを削除します。</p>';
+
+  var clearBtn = document.createElement('button');
+  clearBtn.className = 'settings-btn secondary';
+  clearBtn.textContent = '全データを削除';
+  clearBtn.onclick = function() {
+    if (confirm('すべての記録を削除しますか？この操作は元に戻せません。')) {
+      var keys = allKeys();
+      keys.forEach(function(k) { localStorage.removeItem('w_' + k); });
+      localStorage.removeItem('schedule_data');
+      SCHEDULE = {};
+      ALL_EX = [];
+      render();
+    }
+  };
+  card2.appendChild(clearBtn);
+  app.appendChild(card2);
+
+  app.appendChild(catDeco('🐱 設定はここで管理にゃ'));
 }
 
 // ==== SCHEDULE ====
